@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        canvas{
+            background-image: url("map.jpg");
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1 class='text-center mt-5'>Circle Packing</h1>
+    <div class="container text-center">
+        <div class="row">
+            <div class="col-sm">
+                <canvas id="board" width="500" height="500" class="mt-2 border border-dark"></canvas>
+            </div>
+        </div>
+
+        <p class='my-2'>Виберіть мінімальний та максимальний радіус кіл:</p>
+        <div class="row mt-4">
+            <div class="col-sm-6 text-right">
+                MIN = <input id='MIN'></input>
+            </div>
+            <div class="col-sm-6 text-left">
+                MAX = <input id='MAX'></input>
+            </div>
+        </div>
+        <p class='my-2'>Мінімальний розмір = 20 </p>
+        <p class='my-2'>Максимальний розмір = 250</p>
+
+
+        <div class="row mt-4">
+            <div class="col-sm-6 text-right">
+                <button id='execute'>Продовжити</button>
+            </div>
+            <div class="col-sm-6 text-left">
+                <button id='clear'>Очистити</button>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<title>Circle Packing</title>
+<script>
+$(function () {
+    $('#MIN').val(40)
+    $('#MAX').val(80)
+    let circles = []
+
+    let labels = []
+    let areas = []
+    let averages = []
+
+    const areaColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
+    const averageColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
+
+    for (let i = 0; i < 50; i++) {
+        labels.push(0)
+        areas.push(0)
+        averages.push(0)
+    }
+
+    const data = {
+        labels: labels,
+        datasets:
+            [
+                {
+                    label: 'area covered %',
+                    backgroundColor: areaColor,
+                    borderColor: areaColor,
+                    data: areas,
+                    tension: 0.1
+                },
+                {
+                    label: 'average %',
+                    backgroundColor: averageColor,
+                    borderColor: averageColor,
+                    data: averages,
+                    tension: 0.1
+                }
+            ]
+    };
+
+    let options = {
+        scales: {
+            y: {
+                max: 80,
+                min: 20,
+                ticks: {
+                    stepSize: 5
+                }
+            }
+        }
+    };
+
+    const config = {
+        type: 'line',
+        data: data,
+        options: options
+    };
+
+
+    const circle = (ctx, X, Y, R) => {
+        const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
+        ctx.beginPath()
+        ctx.arc(X, Y, R, 0, 2 * Math.PI)
+        ctx.fillStyle = "transparent"
+        ctx.fill()
+        ctx.strokeStyle = "red";
+        ctx.stroke()
+    }
+
+    const isValid = (X, Y, R) => {
+        valid = true;
+        for (let i = 0; i < circles.length; i++) {
+            const c = circles[i]
+            const d = Math.sqrt(Math.pow((X - parseInt(c.X)), 2) + Math.pow((Y - parseInt(c.Y)), 2))
+            if (d < (R + parseInt(c.R))) {
+                valid = false;
+                break
+            }
+        }
+        return valid
+    }
+
+    let intervalID
+    let count = 0
+
+    let paused = true
+    let averageArea = 0
+    $("#execute").click(function () {
+        paused = !paused
+
+        if (paused) {
+            $("#execute").html('Продовжити')
+            window.clearInterval(intervalID);
+        } else {
+            $("#execute").html('Зупинити')
+            $('#MIN').prop( "disabled", true );
+            $('#MAX').prop( "disabled", true );
+
+            let MIN = parseInt($('#MIN').val())
+            let MAX = parseInt($('#MAX').val())
+
+            if(MIN < 20) MIN = 20
+            if(MIN > 250) MIN = 250
+
+            if(MAX < MIN) MAX = MIN + 1
+            if(MAX > 249) MAX = 249
+
+            if(isNaN(MIN)) MIN = 20
+            if(isNaN(MAX)) MAX = MIN
+
+            $('#MIN').val(MIN)
+            $('#MAX').val(MAX)
+
+            console.log(MIN + ' : ' + MAX)
+            intervalID = setInterval(function () {
+                count++
+                iterate(count, MIN, MAX)
+            }, 2000);
+        }
+    });
+
+    const iterate = (count, MIN, MAX) => {
+        let canvas = document.getElementById('board');
+        let ctx = canvas.getContext('2d');
+
+        circles = []
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        $('#result').text('')
+
+        let oldArea = 0
+        let newArea = 0.000001
+        let noProgressCount = 0
+        while (noProgressCount < 3000) {
+            let failed = 0
+
+            while (failed < 3000) {
+                const R = Math.floor(Math.random() * (MAX - MIN + 1) + MIN)
+                const maxC = 500 - R
+                const X = Math.floor(Math.random() * (maxC - R + 1) + R)
+                const Y = Math.floor(Math.random() * (maxC - R + 1) + R)
+                if (isValid(X, Y, R)) {
+                    circle(ctx, X, Y, R)
+                    const spec = {
+                        X: X,
+                        Y: Y,
+                        R: R
+                    }
+                    circles.push(spec)
+                } else {
+                    failed++
+                }
+            }
+
+            let area = 0
+            for (let i = 0; i < circles.length; i++) {
+                area = area + Math.PI * Math.pow(parseInt(circles[i].R), 2)
+            }
+            oldArea = newArea
+            newArea = area
+
+            if (newArea === oldArea) {
+                noProgressCount++
+            }
+        }
+        const areaPercent = (newArea / (500 * 500)) * 100
+    }
+
+    $("#clear").click(function () {
+        let canvas = document.getElementById('board');
+        let ctx = canvas.getContext('2d');
+        circles = []
+        labels = []
+        areas = []
+        averages = []
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        $('#MIN').prop( "disabled", false );
+        $('#MAX').prop( "disabled", false );
+        window.clearInterval(intervalID);
+        paused = true;
+        $("#execute").html('Продовжити')
+        for (let i = 0; i < 50; i++) {
+            labels.push(0)
+            areas.push(0)
+            averages.push(0)
+        }
+
+        $('#MIN').val(40)
+        $('#MAX').val(80)
+    });
+
+});
+</script>
+
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Circle Packing</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      #art {
+        background-color: rgb(214, 214, 255);
+        background-image: url("map.jpg");
+      }
+      img {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="art"> </canvas>
+  </body>
+
+  <script type="text/javascript">
+    const getRandomColor = () => {
+      let letters = "0123456789ABCDEF".split("");
+      let color = "#";
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * letters.length)];
+      }
+      return color;
+    };
+
+    const generateColors = (colorRange) => {
+      let colors = [];
+      for (let i = 0; i < colorRange; i++) {
+        colors[i] = getRandomColor();
+      }
+      return colors;
+    };
+
+    const circlePacking = () => {
+      let colors = generateColors(10);
+      let canvas = document.getElementById("art");
+      let context = canvas.getContext("2d");
+      let size = 480;
+      let width = 956;
+      let height = 300;
+
+      canvas.width = width;
+      canvas.height = height;
+      context.lineWidth = 2;
+
+      let circles = [];
+      let minRadius = 30;
+      let maxRadius = 60;
+      let totalCircles = 30; 
+      let attempts = width;
+
+      const generateCircle = () => {
+        let newCircle;
+        let isValidCircle = false;
+
+        for (let i = 0; i < attempts; i++) {
+          newCircle = {
+            x: Math.floor(Math.random() * width),
+            y: Math.floor(Math.random() * height),
+            radius: minRadius,
+          };
+
+          if (checkForCollision(newCircle)) {
+            continue;
+          } else {
+            isValidCircle = true;
+            break;
+          }
+        }
+
+        if (!isValidCircle) {
+          return;
+        }
+
+        for (let i = minRadius; i <= maxRadius; i++) {
+          newCircle.radius = i;
+          if (checkForCollision(newCircle)) {
+            newCircle.radius--;
+            break;
+          }
+        }
+
+        circles.push(newCircle);
+      };
+
+      const drawCircleOnCanvas = (context, circle, color) => {
+        context.beginPath();
+        context.arc(circle.x, circle.y, circle.radius, 0, 2 * Math.PI);
+        context.fillStyle = color;
+        // context.fillStyle = "transparent";
+        context.fill();
+        context.strokeStyle = "#FFFFFF";
+        // context.strokeStyle = "red";
+        context.stroke();
+      };
+
+      const checkForCollision = (newCircle) => {
+        let x2 = newCircle.x;
+        let y2 = newCircle.y;
+        let r2 = newCircle.radius;
+
+        for (let i = 0; i < circles.length; i++) {
+          let otherCircle = circles[i];
+          let r1 = otherCircle.radius;
+          let x1 = otherCircle.x;
+          let y1 = otherCircle.y;
+          let xx = (x2 - x1) * (x2 - x1);
+          let yy = (y2 - y1) * (y2 - y1);
+          let radii = r2 + r1;
+          let euclidDistance = Math.sqrt(xx + yy);
+
+          if (radii >= euclidDistance) {
+            return true;
+          }
+        }
+
+        if (x2 + r2 >= width || x2 - r2 <= 0) {
+          return true;
+        }
+
+        if (y2 + r2 >= height || y2 - r2 <= 0) {
+          return true;
+        }
+
+        return false;
+      };
+
+      for (let i = 0; i < totalCircles; i++) {
+        generateCircle();
+      }
+
+      circles.forEach((element) => {
+        drawCircleOnCanvas(
+          context,
+          element,
+          colors[Math.floor(Math.random() * colors.length)]
+        );
+      });
+    };
+
+    circlePacking();
+  </script>
+</html>
